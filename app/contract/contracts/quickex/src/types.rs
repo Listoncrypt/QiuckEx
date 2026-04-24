@@ -178,4 +178,3 @@ pub enum Role {
     /// Authorized to resolve disputes across escrows.
     Arbiter = 3,
 }
-}
