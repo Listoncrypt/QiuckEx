@@ -146,3 +146,22 @@ pub struct FeeConfig {
     /// Fee in basis points (1 = 0.01%, 100 = 1%, 10000 = 100%).
     pub fee_bps: u32,
 }
+
+/// Payload for signed operations to prevent replay attacks.
+///
+/// Includes domain separation (network ID, contract ID) and
+/// replay protection (nonce, expiry).
+#[contracttype]
+#[derive(Clone)]
+pub struct SignaturePayload {
+    /// Network ID for domain separation.
+    pub network_id: BytesN<32>,
+    /// Contract ID for domain separation.
+    pub contract_id: Address,
+    /// Nonce for replay protection.
+    pub nonce: u64,
+    /// Ledger sequence after which the signature is invalid.
+    pub expiry: u32,
+    /// Function parameters or additional data to be signed.
+    pub params: soroban_sdk::Val,
+}

@@ -100,6 +100,8 @@ pub enum DataKey {
     FeeConfig,
     /// Platform wallet address for fee collection (singleton).
     PlatformWallet,
+    /// Nonce for signature replay protection.
+    Nonce(Address),
 }
 
 // -----------------------------------------------------------------------------
@@ -290,4 +292,27 @@ pub fn put_stealth_escrow(env: &Env, stealth_address: &BytesN<32>, entry: &Steal
     env.storage()
         .persistent()
         .extend_ttl(&key, LEDGER_THRESHOLD, SIX_MONTHS_IN_LEDGERS);
+}
+
+// -----------------------------------------------------------------------------
+// Nonce helpers
+// -----------------------------------------------------------------------------
+
+/// Get the current nonce for a signer.
+pub fn get_nonce(env: &Env, signer: &Address) -> u64 {
+    let key = DataKey::Nonce(signer.clone());
+    env.storage().persistent().get(&key).unwrap_or(0)
+}
+
+/// Read and increment the nonce for a signer.
+/// Returns the current nonce before incrementing.
+pub fn read_and_increment_nonce(env: &Env, signer: Address) -> u64 {
+    let key = DataKey::Nonce(signer.clone());
+    let nonce: u64 = env.storage().persistent().get(&key).unwrap_or(0);
+    env.storage().persistent().set(&key, &(nonce + 1));
+    // Extend TTL for nonces to ensure they persist
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, LEDGER_THRESHOLD, SIX_MONTHS_IN_LEDGERS);
+    nonce
 }

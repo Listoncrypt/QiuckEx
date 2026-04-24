@@ -2,6 +2,9 @@
 use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, Vec};
 
 mod admin;
+mod auth;
+#[cfg(test)]
+mod auth_test;
 #[cfg(test)]
 mod bench_test;
 mod commitment;
@@ -28,6 +31,7 @@ mod types;
 
 use errors::QuickexError;
 use storage::*;
+use auth::*;
 use types::{EscrowEntry, EscrowStatus, FeeConfig, PrivacyAwareEscrowView, StealthDepositParams};
 
 /// QuickEx Privacy Contract
@@ -728,7 +732,26 @@ impl QuickexContract {
             .update_current_contract_wasm(new_wasm_hash.clone());
 
         events::publish_contract_upgraded(&env, new_wasm_hash, &admin);
-
         Ok(())
+    }
+
+    /// Get the current nonce for an address.
+    ///
+    /// Used for signature replay protection in external integrations.
+    pub fn nonce(env: Env, signer: Address) -> u64 {
+        storage::get_nonce(&env, &signer)
+    }
+
+    /// Verify a signature and increment the nonce (Internal/Integration use).
+    ///
+    /// This is a helper for external callers to verify signatures using the contract's
+    /// replay protection registry. Panics if verification fails.
+    pub fn verify_sig(
+        env: Env,
+        signer: Address,
+        signature: BytesN<64>,
+        payload: SignaturePayload,
+    ) -> Result<(), QuickexError> {
+        auth::verify_signature(&env, &signer, &signature, &payload)
     }
 }

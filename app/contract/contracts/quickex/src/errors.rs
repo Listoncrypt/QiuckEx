@@ -50,4 +50,8 @@ pub enum QuickexError {
     // Internal/unexpected conditions (900-999)
     InternalError = 900,
     InvalidTimeout = 901,
+    /// Provided nonce does not match the stored nonce.
+    NonceMismatch = 902,
+    /// Signature has expired based on the ledger sequence.
+    SignatureExpired = 903,
 }
