@@ -165,3 +165,17 @@ pub struct SignaturePayload {
     /// Function parameters or additional data to be signed.
     pub params: soroban_sdk::Val,
 }
+
+/// Privileged roles for contract governance and operations.
+#[contracttype]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u32)]
+pub enum Role {
+    /// Full administrative access, including role management and upgrades.
+    Admin = 1,
+    /// Operational access, such as toggling pause flags and fee config.
+    Operator = 2,
+    /// Authorized to resolve disputes across escrows.
+    Arbiter = 3,
+}
+}
