@@ -34,9 +34,9 @@ mod test;
 mod test_context;
 mod types;
 
+use auth::*;
 use errors::QuickexError;
 use storage::*;
-use auth::*;
 use types::{
     EscrowEntry, EscrowStatus, FeeConfig, PrivacyAwareEscrowView, Role, StealthDepositParams,
 };
@@ -786,7 +786,7 @@ impl QuickexContract {
         env.deployer()
             .update_current_contract_wasm(new_wasm_hash.clone());
 
-events::publish_contract_upgraded(&env, new_wasm_hash, &caller);
+        events::publish_contract_upgraded(&env, new_wasm_hash, &caller);
         Ok(())
     }
 

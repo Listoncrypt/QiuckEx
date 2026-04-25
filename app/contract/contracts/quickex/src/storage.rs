@@ -47,8 +47,8 @@
 //! - **Value layout**: Changing `EscrowEntry` fields may require migration logic; adding optional
 //!   fields can be done carefully with defaults.
 
-use soroban_sdk::{contracttype, Address, Bytes, BytesN, Env, Vec};
 use crate::types::{EscrowEntry, FeeConfig, Role, StealthEscrowEntry};
+use soroban_sdk::{contracttype, Address, Bytes, BytesN, Env, Vec};
 
 // -----------------------------------------------------------------------------
 // Key constants
@@ -78,12 +78,12 @@ pub enum PauseFlag {
 pub enum DataKey {
     Escrow(Bytes),
     EscrowCounter,
-/// Current contract schema version (singleton).
+    /// Current contract schema version (singleton).
     ContractVersion,
     /// Admin address (singleton).
     Admin,
     Paused,
-Pause,
+    Pause,
     /// Numeric privacy level per account.
     PrivacyLevel(Address),
     PrivacyHistory(Address),
@@ -212,14 +212,21 @@ pub fn get_privacy_level(env: &Env, account: &Address) -> Option<u32> {
 
 pub fn add_privacy_history(env: &Env, account: &Address, level: u32) {
     let key = DataKey::PrivacyHistory(account.clone());
-    let mut history: Vec<u32> = env.storage().persistent().get(&key).unwrap_or(Vec::new(env));
+    let mut history: Vec<u32> = env
+        .storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env));
     history.push_front(level);
     env.storage().persistent().set(&key, &history);
 }
 
 pub fn get_privacy_history(env: &Env, account: &Address) -> Vec<u32> {
     let key = DataKey::PrivacyHistory(account.clone());
-    env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env))
 }
 
 pub fn get_stealth_escrow(env: &Env, stealth_address: &BytesN<32>) -> Option<StealthEscrowEntry> {
@@ -230,7 +237,9 @@ pub fn get_stealth_escrow(env: &Env, stealth_address: &BytesN<32>) -> Option<Ste
 pub fn put_stealth_escrow(env: &Env, stealth_address: &BytesN<32>, entry: &StealthEscrowEntry) {
     let key = DataKey::StealthEscrow(stealth_address.clone());
     env.storage().persistent().set(&key, entry);
-    env.storage().persistent().extend_ttl(&key, LEDGER_THRESHOLD, SIX_MONTHS_IN_LEDGERS);
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, LEDGER_THRESHOLD, SIX_MONTHS_IN_LEDGERS);
 }
 
 // -----------------------------------------------------------------------------
@@ -238,7 +247,10 @@ pub fn put_stealth_escrow(env: &Env, stealth_address: &BytesN<32>, entry: &Steal
 // -----------------------------------------------------------------------------
 
 pub fn get_fee_config(env: &Env) -> FeeConfig {
-    env.storage().persistent().get(&DataKey::FeeConfig).unwrap_or(FeeConfig { fee_bps: 0 })
+    env.storage()
+        .persistent()
+        .get(&DataKey::FeeConfig)
+        .unwrap_or(FeeConfig { fee_bps: 0 })
 }
 
 pub fn set_fee_config(env: &Env, config: &FeeConfig) {
@@ -250,7 +262,9 @@ pub fn get_platform_wallet(env: &Env) -> Option<Address> {
 }
 
 pub fn set_platform_wallet(env: &Env, wallet: &Address) {
-    env.storage().persistent().set(&DataKey::PlatformWallet, wallet);
+    env.storage()
+        .persistent()
+        .set(&DataKey::PlatformWallet, wallet);
 }
 
 // -----------------------------------------------------------------------------
@@ -266,7 +280,9 @@ pub fn read_and_increment_nonce(env: &Env, signer: Address) -> u64 {
     let key = DataKey::Nonce(signer.clone());
     let nonce: u64 = env.storage().persistent().get(&key).unwrap_or(0);
     env.storage().persistent().set(&key, &(nonce + 1));
-    env.storage().persistent().extend_ttl(&key, LEDGER_THRESHOLD, SIX_MONTHS_IN_LEDGERS);
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, LEDGER_THRESHOLD, SIX_MONTHS_IN_LEDGERS);
     nonce
 }
 

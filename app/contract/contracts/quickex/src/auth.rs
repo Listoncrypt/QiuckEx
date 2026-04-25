@@ -1,7 +1,7 @@
-use soroban_sdk::{Address, Env, IntoVal};
 use crate::errors::QuickexError;
 use crate::storage;
 use crate::types::SignaturePayload;
+use soroban_sdk::{Address, Env, IntoVal};
 
 /// Verify a signature against a payload, ensuring replay protection and domain separation.
 ///
