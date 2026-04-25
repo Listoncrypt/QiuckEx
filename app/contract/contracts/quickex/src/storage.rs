@@ -3,6 +3,49 @@
 //! This module defines the persistent storage layout for the QuickEx contract.
 //! All long-term data is stored via the [`DataKey`] enum, which centralises key
 //! construction and ensures type-safe storage access.
+//! # QuickEx Storage Schema
+//!
+//! This module defines the persistent storage layout for the QuickEx contract.
+//! All long-term data is stored via the [`DataKey`] enum, which centralises key
+//! construction and ensures type-safe storage access.
+//!
+//! ## Key Layout
+//!
+//! | Key Variant            | Value Type     | Description |
+//! |------------------------|----------------|-------------|
+//! | [`Escrow`](DataKey::Escrow) | `EscrowEntry`  | Escrow entry keyed by commitment hash (32 bytes). One entry per unique deposit. |
+//! | [`EscrowCounter`](DataKey::EscrowCounter) | `u64`       | Global monotonic counter for escrow creation. |
+//! | [`ContractVersion`](DataKey::ContractVersion) | `u32` | Stored schema/version marker for upgrade migrations. |
+//! | [`Admin`](DataKey::Admin) | `Address`     | Contract admin address. Set during initialisation, transferable by admin. |
+//! | [`Paused`](DataKey::Paused) | `bool`       | Global pause flag. When true, critical operations may be blocked. |
+//! | [`PrivacyLevel`](DataKey::PrivacyLevel) | `u32`  | Numeric privacy level per account (0 = off). Used by `enable_privacy`. |
+//! | [`PrivacyHistory`](DataKey::PrivacyHistory) | `Vec<u32>` | Per-account history of privacy level changes (chronological). |
+//! | [`Nonce`](DataKey::Nonce) | `u64` | Nonce for signature replay protection (Issue #299). |
+//! | [`UserRole`](DataKey::UserRole) | `Vec<Role>` | Roles assigned to an address for governance. |
+//! | [`EscrowIdMap`](DataKey::EscrowIdMap) | `BytesN<32>` | Mapping of deterministic escrow ID to commitment hash. |
+//!
+//! ## Related Keys (outside `DataKey`)
+//!
+//! | Key                    | Format                    | Value Type | Description |
+//! |------------------------|---------------------------|------------|-------------|
+//! | `privacy_enabled`      | `(Symbol, Address)`       | `bool`     | Boolean privacy on/off per account. Used by `set_privacy` / `get_privacy`. |
+//!
+//! ## Relations
+//!
+//! - **Escrow ↔ Commitment**: Each `Escrow(Bytes)` key is derived from a 32-byte commitment hash
+//!   (`SHA256(owner || amount || salt)`). The stored [`EscrowEntry`] contains token, amount, owner,
+//!   status, and created_at.
+//! - **Admin ↔ Paused**: Admin can set the paused flag. Both are singleton keys.
+//! - **PrivacyLevel ↔ PrivacyHistory**: Same account may have both; level is current, history is append-only.
+//! - **PrivacyLevel / PrivacyHistory ↔ privacy_enabled**: Separate APIs; level-based vs boolean. Both persist per `Address`.
+//!
+//! ## Backwards Compatibility
+//!
+//! For future upgrades:
+//! - **Do not** remove or change the discriminant of existing [`DataKey`] variants.
+//! - **Add** new variants for new keys; they will not collide with existing ones.
+//! - **Value layout**: Changing `EscrowEntry` fields may require migration logic; adding optional
+//!   fields can be done carefully with defaults.
 
 use soroban_sdk::{contracttype, Address, Bytes, BytesN, Env, Vec};
 use crate::types::{EscrowEntry, FeeConfig, Role, StealthEscrowEntry};
@@ -12,6 +55,8 @@ use crate::types::{EscrowEntry, FeeConfig, Role, StealthEscrowEntry};
 // -----------------------------------------------------------------------------
 
 pub const PRIVACY_ENABLED_KEY: &str = "privacy_enabled";
+pub const LEGACY_CONTRACT_VERSION: u32 = 0;
+pub const CURRENT_CONTRACT_VERSION: u32 = 1;
 pub const LEDGER_THRESHOLD: u32 = 17280; // ~1 day
 pub const SIX_MONTHS_IN_LEDGERS: u32 = 3110400; // ~185 days
 
@@ -33,6 +78,9 @@ pub enum PauseFlag {
 pub enum DataKey {
     Escrow(Bytes),
     EscrowCounter,
+/// Current contract schema version (singleton).
+    ContractVersion,
+    /// Admin address (singleton).
     Admin,
     Paused,
 Pause,
@@ -91,6 +139,16 @@ pub fn increment_escrow_counter(env: &Env) -> u64 {
     count += 1;
     env.storage().persistent().set(&key, &count);
     count
+}
+
+pub fn get_contract_version(env: &Env) -> Option<u32> {
+    env.storage().persistent().get(&DataKey::ContractVersion)
+}
+
+pub fn set_contract_version(env: &Env, version: u32) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::ContractVersion, &version);
 }
 
 // -----------------------------------------------------------------------------
